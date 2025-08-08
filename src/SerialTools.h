@@ -14,7 +14,7 @@ class SerialUtils {
         bool have_interrupt_byte = false;
         uint8_t interrupt_byte = 0;
 
-        QueueArray<char*> queries; // 儲存每次收到完整訊息
+        QueueArray<const char*> queue; // 儲存每次收到完整訊息
 
         int check_buffer_size() {
             if (buffer_length >= buffer_max) {
@@ -43,7 +43,7 @@ class SerialUtils {
             buffer[buffer_length] = '\0';
             // 複製一份資料放入 queue
             char* msg = strdup((const char*)buffer);
-            if (msg) queries.push(msg);
+            if (msg) queue.push(msg);
             buffer_length = 0; // 重置 buffer
         }
 
@@ -52,15 +52,15 @@ class SerialUtils {
             init(serial, baud);
         }
 
-        SerialUtils(SerialType* serial, int baud, uint8_t interrupt_byte) {
+        SerialUtils(SerialType* serial, int baud, uint8_t interrupt_byte): queue(10) {
             init(serial, baud);
             set_interrupt_byte(interrupt_byte);
         }
 
         ~SerialUtils() {
             free(buffer);
-            while (!queries.isEmpty()) {
-                free(queries.pop());
+            while (!queue.isEmpty()) {
+                free(queue.pop());
             }
         }
 
@@ -74,13 +74,20 @@ class SerialUtils {
         }
 
         uint16_t queue_size() {
-            return queries.count();
+            return queue.count();
         }
 
         const char* get_buffer() {
-            if (queries.isEmpty()) return nullptr;
-            char* msg = queries.pop();
+            if (queue.isEmpty()) return nullptr;
+            char* msg = queue.pop();
             return msg; // 呼叫端需要 free(msg)
+        }
+
+        void send_bytes(uint8_t *bytes, int length) {
+            for(int i = 0; i < length; i++) {
+                _serial->write(bytes[i]);
+            }
+            return;
         }
 
         void service() {
