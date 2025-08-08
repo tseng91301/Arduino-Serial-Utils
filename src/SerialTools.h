@@ -73,6 +73,10 @@ class SerialUtils {
             buffer_length = 0;
         }
 
+        uint16_t queue_size() {
+            return queries.count();
+        }
+
         const char* get_buffer() {
             if (queries.isEmpty()) return nullptr;
             char* msg = queries.pop();
